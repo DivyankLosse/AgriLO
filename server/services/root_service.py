@@ -1,24 +1,55 @@
-import random
+import tensorflow as tf
+import numpy as np
+from PIL import Image
+import io
+import json
+import os
+from config import settings
 
 class RootService:
     def __init__(self):
-        print("[INFO] Lite Mode: Root Service initialized with Mock Data")
-        self.mock_diagnoses = [
-            "Healthy Root", 
-            "Diseased Root",
-            "Root Rot (Fungal/Bacterial)",
-            "Root Knot Nematodes"
-        ]
+        self.model = None
+        self.class_labels = {}
+        self._load_model()
+
+    def _load_model(self):
+        try:
+            if os.path.exists(settings.ROOT_MODEL_PATH):
+                self.model = tf.keras.models.load_model(settings.ROOT_MODEL_PATH)
+                print("[INFO] Root Disease Model Loaded")
+            else:
+                print(f"[WARN] Root Model not found at {settings.ROOT_MODEL_PATH}")
+
+            if os.path.exists(settings.ROOT_CLASS_INDICES_PATH):
+                with open(settings.ROOT_CLASS_INDICES_PATH, 'r') as f:
+                    class_indices = json.load(f)
+                # Invert mapping: index -> label
+                self.class_labels = {v: k for k, v in class_indices.items()}
+            else:
+                 print(f"[WARN] Root Class Indices not found at {settings.ROOT_CLASS_INDICES_PATH}")
+
+        except Exception as e:
+            print(f"[ERROR] Error loading root model: {e}")
 
     async def predict_root_disease(self, image_data: bytes):
+        if not self.model:
+             return "Model unavailable", "Please contact support."
+
         try:
-             # Simulation
-            diagnosis = random.choice(self.mock_diagnoses)
-            
+            # Preprocess Image
+            image = Image.open(io.BytesIO(image_data)).convert('RGB')
+            image = image.resize((224, 224))
+            img_array = np.array(image) / 255.0
+            img_array = np.expand_dims(img_array, axis=0)
+
+            # Predict
+            predictions = self.model.predict(img_array)
+            predicted_idx = np.argmax(predictions[0])
+            confidence = float(np.max(predictions[0])) * 100
+            diagnosis = self.class_labels.get(predicted_idx, "Unknown")
+
             # Simple Recommendations based on diagnosis
             recommendation = self.get_recommendation(diagnosis)
-            
-            print(f"[INFO] Mock Root Prediction: {diagnosis}")
             
             return diagnosis, recommendation
 

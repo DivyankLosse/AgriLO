@@ -2,18 +2,12 @@ import paho.mqtt.client as mqtt
 import json
 import logging
 from config import settings
-from sqlmodel import Session, create_engine
-from models import SoilData
+from pymongo import MongoClient
 from datetime import datetime
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
-# Database engine for background task
-# Use synchronous engine for MQTT callbacks
-SYNC_DATABASE_URL = settings.DATABASE_URL.replace("+aiosqlite", "")
-engine = create_engine(SYNC_DATABASE_URL)
 
 class MQTTService:
     def __init__(self):
@@ -21,6 +15,16 @@ class MQTTService:
         self.client.on_connect = self.on_connect
         self.client.on_message = self.on_message
         self.client.on_disconnect = self.on_disconnect
+        
+        # Use PyMongo for synchronous DB access in callbacks
+        try:
+             # Extract DB name from URL or use default
+            db_name = settings.DATABASE_URL.split("/")[-1].split("?")[0] or "agrilo"
+            self.mongo_client = MongoClient(settings.DATABASE_URL)
+            self.db = self.mongo_client[db_name]
+            logger.info(f"MQTT Service connected to MongoDB: {db_name}")
+        except Exception as e:
+            logger.error(f"Failed to connect to MongoDB from MQTT Service: {e}")
 
     def on_connect(self, client, userdata, flags, rc):
         if rc == 0:
@@ -38,22 +42,21 @@ class MQTTService:
             logger.info(f"Received MQTT Message: {payload}")
             data = json.loads(payload)
 
-            # Validate and Save to DB
-            with Session(engine) as session:
-                soil_data = SoilData(
-                    node_id=data.get("node_id", "unknown"),
-                    nitrogen=data.get("nitrogen", 0),
-                    phosphorus=data.get("phosphorus", 0),
-                    potassium=data.get("potassium", 0),
-                    ph=float(data.get("ph", 7.0)),
-                    moisture=float(data.get("moisture", 0.0)),
-                    temperature=float(data.get("temperature", 0.0)),
-                    ec=float(data.get("ec", 0.0)),
-                    timestamp=datetime.utcnow()
-                )
-                session.add(soil_data)
-                session.commit()
-                logger.info(f"Saved DB Record ID: {soil_data.id}")
+            # Save to MongoDB via PyMongo
+            document = {
+                "node_id": data.get("node_id", "unknown"),
+                "nitrogen": int(data.get("nitrogen", 0)),
+                "phosphorus": int(data.get("phosphorus", 0)),
+                "potassium": int(data.get("potassium", 0)),
+                "ph": float(data.get("ph", 7.0)),
+                "moisture": float(data.get("moisture", 0.0)),
+                "temperature": float(data.get("temperature", 0.0)),
+                "ec": float(data.get("ec", 0.0)),
+                "timestamp": datetime.utcnow()
+            }
+            
+            result = self.db.soil_data.insert_one(document)
+            logger.info(f"Saved DB Record ID: {result.inserted_id}")
 
         except json.JSONDecodeError:
             logger.error("Failed to decode JSON payload")
@@ -71,5 +74,7 @@ class MQTTService:
     def stop(self):
         self.client.loop_stop()
         self.client.disconnect()
+        if hasattr(self, 'mongo_client'):
+            self.mongo_client.close()
 
 mqtt_service = MQTTService()

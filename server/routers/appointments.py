@@ -70,6 +70,26 @@ async def verify_payment(payment: PaymentVerify, current_user: User = Depends(ge
         print(f"Payment Error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+@router.post("/book_direct")
+async def book_direct(details: dict, current_user: User = Depends(get_current_user)):
+    try:
+        new_appointment = Appointment(
+            user_id=current_user.id,
+            name=details.get("name"),
+            phone=details.get("phone"),
+            address=details.get("address"),
+            date=datetime.fromisoformat(details.get("date")), 
+            amount=199.00,
+            payment_id="pay_later",
+            order_id="pay_later",
+            status=AppointmentStatus.PENDING.value
+        )
+        await new_appointment.insert()
+        return {"status": "success", "appointment_id": new_appointment.id}
+    except Exception as e:
+        print(f"Booking Error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 @router.get("/my_appointments")
 async def get_my_appointments(current_user: User = Depends(get_current_user)):
     appointments = await Appointment.find(

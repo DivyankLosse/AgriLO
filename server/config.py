@@ -9,7 +9,7 @@ class Settings(BaseSettings):
     """Application configuration settings."""
     
     # Database
-    DATABASE_URL: str = "mongodb://localhost:27017/agrilo"
+    DATABASE_URL: str = "mongodb+srv://AgriLo:Agri1234567890@agrilo.9xrxozz.mongodb.net"
     
     # Security
     SECRET_KEY: str = "your-secret-key-change-in-production"
@@ -24,7 +24,7 @@ class Settings(BaseSettings):
     
     # AI Services
     GEMINI_API_KEY: Optional[str] = None
-    GROQ_API_KEY: Optional[str] = None
+    GROQ_API_KEY: Optional[str] =None
     
     # Model Paths
     LEAF_MODEL_PATH: str = os.path.join(BASE_DIR, "models/leaf_model.h5")
@@ -36,7 +36,7 @@ class Settings(BaseSettings):
     ROOT_CLASS_INDICES_PATH: str = os.path.join(BASE_DIR, "models/root_class_indices.json")
     
     # CORS
-    CORS_ORIGINS: list = ["http://localhost:5173", "http://localhost:3000"]
+    CORS_ORIGINS: list = ["http://localhost:5173", "http://localhost:3000","https://agri-lo-ivory.vercel.app/"]
     
     # App Info
     APP_NAME: str = "Agri-Lo API"

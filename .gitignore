@@ -1,0 +1,15 @@
+__pycache__/
+*.py[cod]
+*$py.class
+.env
+venv/
+node_modules/
+dist/
+.DS_Store
+Datasets/
+static/uploads/
+*.db
+*.sqlite3
+.venv/
+server/.venv/
+client/node_modules/

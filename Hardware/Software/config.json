@@ -1,0 +1,7 @@
+{
+    "mqtt_broker": "localhost",
+    "mqtt_port": 1883,
+    "mqtt_topic": "farm/soil/node01/data",
+    "csv_file": "soil_data.csv",
+    "log_file": "system.log"
+}

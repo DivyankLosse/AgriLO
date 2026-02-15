@@ -1,5 +1,6 @@
 import os
 os.environ["TF_USE_LEGACY_KERAS"] = "0"
+import keras
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles

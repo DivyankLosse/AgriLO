@@ -21,10 +21,10 @@ email-validator>=2.1.0
 python-dotenv>=1.0.0
 
 # AI/ML
-tensorflow>=2.16.0
-keras>=3.0.0
-tensorflow-model-optimization>=0.8.0
-scikit-learn>=1.5.0
+tensorflow==2.16.1
+keras==3.3.3
+tensorflow-model-optimization==0.8.0
+scikit-learn==1.5.1
 joblib>=1.3.0
 
 # Data Processing

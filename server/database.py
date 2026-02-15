@@ -6,8 +6,13 @@ import models
 async def init_db():
     client = AsyncIOMotorClient(settings.DATABASE_URL)
     # Beanie initialization
+    try:
+        db = client.get_default_database()
+    except Exception:
+        db = client["agrilo"]
+        
     await init_beanie(
-        database=client.get_default_database(),
+        database=db,
         document_models=[
             models.User,
             models.AuthSession,

@@ -19,7 +19,13 @@ class MQTTService:
         # Use PyMongo for synchronous DB access in callbacks
         try:
              # Extract DB name from URL or use default
-            db_name = settings.DATABASE_URL.split("/")[-1].split("?")[0] or "agrilo"
+            try:
+                from pymongo.uri_parser import parse_uri
+                parsed = parse_uri(settings.DATABASE_URL)
+                db_name = parsed.get("database") or "agrilo"
+            except Exception:
+                db_name = "agrilo"
+            
             self.mongo_client = MongoClient(settings.DATABASE_URL)
             self.db = self.mongo_client[db_name]
             logger.info(f"MQTT Service connected to MongoDB: {db_name}")

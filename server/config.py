@@ -9,7 +9,7 @@ class Settings(BaseSettings):
     """Application configuration settings."""
     
     # Database
-    DATABASE_URL: str = "mongodb+srv://AgriLo:Agri1234567890@agrilo.9xrxozz.mongodb.net"
+    DATABASE_URL: str = "mongodb+srv://AgriLo:Agri1234567890@agrilo.9xrxozz.mongodb.net/agrilo"
     
     # Security
     SECRET_KEY: str = "your-secret-key-change-in-production"

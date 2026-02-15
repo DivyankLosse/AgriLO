@@ -4,6 +4,7 @@ import json
 import numpy as np
 from PIL import Image
 import tensorflow as tf
+import tensorflow_model_optimization as tfmot
 from config import settings
 from services.treatment_service import treatment_service
 
@@ -11,13 +12,18 @@ class DiseaseService:
     def __init__(self):
         self.model = None
         self.class_indices = {}
-        self._load_model()
+        # Model is NOT loaded here to allow fast startup
 
     def _load_model(self):
+        if self.model is not None:
+             return
+
         try:
+            print("[INFO] Loading Leaf Disease Model (Lazy Load)...")
             # Load Model
             if os.path.exists(settings.LEAF_MODEL_PATH):
-                self.model = tf.keras.models.load_model(settings.LEAF_MODEL_PATH)
+                with tfmot.quantization.keras.quantize_scope():
+                    self.model = tf.keras.models.load_model(settings.LEAF_MODEL_PATH)
                 print("[INFO] Leaf Disease Model (TensorFlow) Loaded")
             else:
                  print(f"[WARN] Leaf Model not found at {settings.LEAF_MODEL_PATH}")
@@ -36,11 +42,11 @@ class DiseaseService:
             print(f"[ERROR] Error loading leaf model: {e}")
 
     async def predict_disease(self, image_data: bytes):
+        # Lazy Load
         if not self.model:
-             # Try reloading if not loaded (e.g. if file was created after server start)
             self._load_model()
             if not self.model:
-                return None, 0, {"error": "Model not loaded"}
+                return None, 0, {"error": "Model not loaded service unavailable"}
         
         try:
             # Preprocess Image

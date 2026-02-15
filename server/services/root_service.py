@@ -4,18 +4,24 @@ from PIL import Image
 import io
 import json
 import os
+import tensorflow_model_optimization as tfmot
 from config import settings
 
 class RootService:
     def __init__(self):
         self.model = None
         self.class_labels = {}
-        self._load_model()
+        # Model is NOT loaded here to allow fast startup
 
     def _load_model(self):
+        if self.model is not None:
+             return
+             
         try:
+            print("[INFO] Loading Root Disease Model (Lazy Load)...")
             if os.path.exists(settings.ROOT_MODEL_PATH):
-                self.model = tf.keras.models.load_model(settings.ROOT_MODEL_PATH)
+                with tfmot.quantization.keras.quantize_scope():
+                    self.model = tf.keras.models.load_model(settings.ROOT_MODEL_PATH)
                 print("[INFO] Root Disease Model Loaded")
             else:
                 print(f"[WARN] Root Model not found at {settings.ROOT_MODEL_PATH}")
@@ -32,8 +38,11 @@ class RootService:
             print(f"[ERROR] Error loading root model: {e}")
 
     async def predict_root_disease(self, image_data: bytes):
+        # Lazy Load
         if not self.model:
-             return "Model unavailable", "Please contact support."
+             self._load_model()
+             if not self.model:
+                 return "Model unavailable", "Please contact support."
 
         try:
             # Preprocess Image

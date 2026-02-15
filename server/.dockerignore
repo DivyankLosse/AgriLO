@@ -1,0 +1,16 @@
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+env
+venv
+.env
+.venv
+Pipfile
+Pipfile.lock
+mqtt_data
+static/uploads
+.git
+.gitignore
+.vscode

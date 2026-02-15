@@ -9,6 +9,7 @@ python-multipart>=0.0.9
 # Database
 motor>=3.3.0
 beanie>=1.25.0
+certifi>=2024.2.2
 
 # Authentication
 python-jose[cryptography]>=3.3.0

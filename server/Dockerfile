@@ -17,11 +17,10 @@ FROM python:3.10-slim
 
 WORKDIR /app
 
-# Install runtime system dependencies (GL libraries for CV2/Pillow if needed)
-# RUN apt-get update && apt-get install -y \
-#     libgl1-mesa-glx \
-#     libglib2.0-0 \
-#     && rm -rf /var/lib/apt/lists/*
+# Install runtime system dependencies
+RUN apt-get update && apt-get install -y \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
 
 # Copy installed python dependencies from builder
 COPY --from=builder /install /usr/local

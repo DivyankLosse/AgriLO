@@ -1,20 +1,38 @@
 import os
-# Force legacy Keras for compatibility with existing models
 os.environ["TF_USE_LEGACY_KERAS"] = "1"
 
-from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-import uvicorn
-from routers import analysis, chat, auth, root_analysis, analytics, support, users, soil_data, appointments
-import models
 from fastapi.staticfiles import StaticFiles
-import os
+import uvicorn
+
+from routers import (
+    analysis, chat, auth, root_analysis,
+    analytics, support, users, soil_data, appointments
+)
 from database import init_db
 from services.mqtt import mqtt_service
-import asyncio
 
-app = FastAPI(title="Agri-Lo API", description="Backend for Agri-Lo Smart Farming App")
+# Create FastAPI app
+app = FastAPI(
+    title="Agri-Lo API",
+    description="Backend for Agri-Lo Smart Farming App"
+)
+
+# ------------------ CORS (ADD THIS FIRST) ------------------
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "https://agri-lo-phi.vercel.app",
+        "http://localhost:5173",
+    ],
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["*"],
+)
+
+# ------------------ Startup / Shutdown ------------------
 
 @app.on_event("startup")
 async def start_db():
@@ -25,20 +43,13 @@ async def start_db():
 async def shutdown():
     mqtt_service.stop()
 
-# Mount Static Files
+# ------------------ Static Files ------------------
+
 os.makedirs("static/uploads", exist_ok=True)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
-# CORS Middleware
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["https://agri-lo-phi.vercel.app", "http://localhost:5173"],  # Allow all origins for dev
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# ------------------ Routers ------------------
 
-# Include Routers
 app.include_router(auth.router, prefix="/api/auth", tags=["Auth"])
 app.include_router(analysis.router, prefix="/api/analysis", tags=["Analysis"])
 app.include_router(root_analysis.router, prefix="/api/root", tags=["Root Health"])
@@ -53,5 +64,13 @@ app.include_router(appointments.router, prefix="/api/appointments", tags=["Appoi
 async def root():
     return {"message": "Agri-Lo API is running 🚀 (Python/FastAPI)"}
 
+# ------------------ Run Server ------------------
+
 if __name__ == "__main__":
-    uvicorn.run("main:app", host="0.0.0.0", port=5000, reload=True)
+    port = int(os.environ.get("PORT", 8000))
+    uvicorn.run(
+        "main:app",
+        host="0.0.0.0",
+        port=port,
+        proxy_headers=True
+    )

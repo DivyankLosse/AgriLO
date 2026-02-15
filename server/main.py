@@ -32,7 +32,7 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 # CORS Middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allow all origins for dev
+    allow_origins=["https://agri-lo-phi.vercel.app", "http://localhost:5173"],  # Allow all origins for dev
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

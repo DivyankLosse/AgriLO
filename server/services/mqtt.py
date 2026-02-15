@@ -4,6 +4,7 @@ import logging
 from config import settings
 from pymongo import MongoClient
 from datetime import datetime
+import certifi
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
@@ -11,6 +12,7 @@ logger = logging.getLogger(__name__)
 
 class MQTTService:
     def __init__(self):
+        # ... (lines 14-18)
         self.client = mqtt.Client()
         self.client.on_connect = self.on_connect
         self.client.on_message = self.on_message

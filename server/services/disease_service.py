@@ -4,6 +4,7 @@ import json
 import numpy as np
 from PIL import Image
 import tensorflow as tf
+import keras
 import tensorflow_model_optimization as tfmot
 from config import settings
 from services.treatment_service import treatment_service
@@ -23,7 +24,7 @@ class DiseaseService:
             # Load Model
             if os.path.exists(settings.LEAF_MODEL_PATH):
                 with tfmot.quantization.keras.quantize_scope():
-                    self.model = tf.keras.models.load_model(settings.LEAF_MODEL_PATH)
+                    self.model = keras.models.load_model(settings.LEAF_MODEL_PATH)
                 print("[INFO] Leaf Disease Model (TensorFlow) Loaded")
             else:
                  print(f"[WARN] Leaf Model not found at {settings.LEAF_MODEL_PATH}")

@@ -3,6 +3,8 @@ from beanie import init_beanie
 from config import settings
 import models
 
+import certifi
+
 async def init_db():
     client = AsyncIOMotorClient(settings.DATABASE_URL)
     # Beanie initialization

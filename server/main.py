@@ -1,3 +1,8 @@
+import os
+# Force legacy Keras for compatibility with existing models
+os.environ["TF_USE_LEGACY_KERAS"] = "1"
+
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn

@@ -5,6 +5,15 @@ from config import settings
 from schemas import soil as schemas
 
 class SoilService:
+    # Crop specific requirements (pH_min, pH_max, N_min, P_min, K_min)
+    CROP_THRESHOLDS = {
+        "blueberry": {"ph": (4.5, 5.5), "n": 30, "p": 15, "k": 30},
+        "potato": {"ph": (5.0, 6.5), "n": 60, "p": 25, "k": 80},
+        "rice": {"ph": (5.5, 7.0), "n": 80, "p": 30, "k": 40},
+        "tomato": {"ph": (6.0, 7.0), "n": 60, "p": 30, "k": 60},
+        "generic": {"ph": (6.0, 7.5), "n": 50, "p": 20, "k": 50}
+    }
+
     def __init__(self):
         self.model = None
         self.label_encoder = None
@@ -21,72 +30,52 @@ class SoilService:
         except Exception as e:
             print(f"[ERROR] Error loading soil models: {e}")
 
-    def analyze_health(self, data: schemas.SoilDataInput):
-        # Determine health based on nutrient levels (simple heuristic for MVP)
-        # Ideal NPK approx: N(50-200), P(20-100), K(50-200), pH(6-7.5)
+    def analyze_health(self, data: schemas.SoilDataInput, crop_name: str = "generic"):
+        # Normalize crop name
+        crop_key = crop_name.lower() if crop_name else "generic"
+        thresholds = self.CROP_THRESHOLDS.get(crop_key, self.CROP_THRESHOLDS["generic"])
         
-        score = 0
-        total_checks = 4
+        problems = []
         
         # pH Check
-        if 6.0 <= data.ph <= 7.5:
-            score += 1
+        ph_min, ph_max = thresholds["ph"]
+        if data.ph < ph_min:
+            problems.append(f"Soil is too Acidic for {crop_key} (Target: {ph_min}-{ph_max})")
+        elif data.ph > ph_max:
+            problems.append(f"Soil is too Alkaline for {crop_key} (Target: {ph_min}-{ph_max})")
         
-        # Nitrogen Check (broad range)
-        if 50 <= data.nitrogen <= 200:
-            score += 1
+        # Nitrogen Check
+        if data.nitrogen < thresholds["n"]:
+            problems.append(f"Nitrogen Deficiency (Low N for {crop_key})")
+        elif data.nitrogen > 250:
+            problems.append("Nitrogen Toxicity (Critical High N)")
             
         # Phosphorus Check
-        if 20 <= data.phosphorus <= 100:
-            score += 1
+        if data.phosphorus < thresholds["p"]:
+            problems.append(f"Phosphorus Deficiency (Low P for {crop_key})")
             
         # Potassium Check
-        if 50 <= data.potassium <= 200:
-            score += 1
+        if data.potassium < thresholds["k"]:
+            problems.append(f"Potassium Deficiency (Low K for {crop_key})")
+
+        # Moisture Check
+        if data.moisture < 20:
+            problems.append("Critical: Very Dry Soil")
+        elif data.moisture > 85:
+            problems.append("Critical: Soil is Waterlogged")
             
-        health_percentage = (score / total_checks) * 100
+        health_percentage = 100 - (len(problems) * 15)
+        health_percentage = max(0, min(100, health_percentage))
         
-        if health_percentage >= 75:
+        if health_percentage >= 85:
+            status = "Excellent"
+        elif health_percentage >= 70:
             status = "Good"
         elif health_percentage >= 50:
-            status = "Average"
+            status = "Fair"
         else:
-            status = "Poor"
+            status = "Critical"
             
-        return status, health_percentage
-
-    def predict_crop(self, data: schemas.SoilDataInput):
-        if not self.model:
-            return "Model unavailable"
-            
-        try:
-            # Features: N, P, K, temp, humidity, ph, rainfall
-            # Mocking humidity as we don't have it in input yet, defaulting to 80 or similar
-            humidity = 70.0 
-            
-            features = np.array([[
-                data.nitrogen,
-                data.phosphorus,
-                data.potassium,
-                data.temperature,
-                humidity,
-                data.ph,
-                data.rainfall
-            ]])
-            
-            prediction_idx = self.model.predict(features)[0]
-            crop_name = self.label_encoder.inverse_transform([prediction_idx])[0]
-            return crop_name
-        except Exception as e:
-            print(f"Prediction logic error: {e}")
-            return "Analysis failed"
-
-    def get_recommendations(self, status: str, crop: str):
-        if status == "Good":
-            return [f"Soil is suitable for {crop}.", "Maintain current irrigation schedule."]
-        elif status == "Average":
-            return [f"Soil needs slight nutrient boost for {crop}.", "Consider adding organic compost.", "Check Ph levels."]
-        else:
-            return ["Soil quality is poor.", "Do not plant yet.", "Add NPK fertilizers 10:10:10.", "Consult soil expert."]
+        return status, health_percentage, problems
 
 soil_service = SoilService()

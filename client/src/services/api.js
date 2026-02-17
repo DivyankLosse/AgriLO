@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-    baseURL: 'https://agrilo-production-13a1.up.railway.app/api',
+    baseURL: '/api',
 });
 
 // Add a request interceptor

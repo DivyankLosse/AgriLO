@@ -58,6 +58,16 @@ export const AuthProvider = ({ children }) => {
         window.location.href = '/auth';
     };
 
+    const loginWithFirebase = async (idToken) => {
+        const response = await api.post('/auth/firebase-login', { idToken }, {
+            headers: { 'Content-Type': 'application/json' }
+        });
+        const { access_token, ...userData } = response.data;
+        localStorage.setItem('access_token', access_token);
+        setUser(userData);
+        return response.data;
+    };
+
     const updateProfile = async (userData) => {
         const response = await api.put('/users/me', userData);
         setUser(prev => ({ ...prev, ...response.data }));
@@ -65,7 +75,7 @@ export const AuthProvider = ({ children }) => {
     };
 
     return (
-        <AuthContext.Provider value={{ user, login, register, logout, updateProfile, loading }}>
+        <AuthContext.Provider value={{ user, login, register, logout, updateProfile, loginWithFirebase, loading }}>
             {children}
         </AuthContext.Provider>
     );

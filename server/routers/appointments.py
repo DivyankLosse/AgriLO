@@ -6,12 +6,13 @@ from models import Appointment, User, AppointmentStatus
 from datetime import datetime
 import uuid
 from dependencies import get_current_user
-
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlmodel import select, col
+from database import get_session
 
 router = APIRouter()
 
 # Initialize Razorpay Client
-# Ensure these are set in your .env or config.py
 client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
 
 class OrderCreate(BaseModel):
@@ -29,7 +30,10 @@ async def get_payment_config(current_user: User = Depends(get_current_user)):
     return {"key": settings.RAZORPAY_KEY_ID}
 
 @router.post("/create_order")
-async def create_order(order: OrderCreate, current_user: User = Depends(get_current_user)):
+async def create_order(
+    order: OrderCreate, 
+    current_user: User = Depends(get_current_user)
+):
     try:
         data = { "amount": int(order.amount * 100), "currency": order.currency, "receipt": str(uuid.uuid4()) }
         payment_order = client.order.create(data=data)
@@ -38,7 +42,11 @@ async def create_order(order: OrderCreate, current_user: User = Depends(get_curr
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/verify_payment")
-async def verify_payment(payment: PaymentVerify, current_user: User = Depends(get_current_user)):
+async def verify_payment(
+    payment: PaymentVerify, 
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session)
+):
     try:
         # Verify signature
         params_dict = {
@@ -61,7 +69,10 @@ async def verify_payment(payment: PaymentVerify, current_user: User = Depends(ge
             order_id=payment.razorpay_order_id,
             status=AppointmentStatus.CONFIRMED.value
         )
-        await new_appointment.insert()
+        session.add(new_appointment)
+        await session.commit()
+        await session.refresh(new_appointment)
+        
         return {"status": "success", "appointment_id": new_appointment.id}
         
     except razorpay.errors.SignatureVerificationError:
@@ -71,7 +82,11 @@ async def verify_payment(payment: PaymentVerify, current_user: User = Depends(ge
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/book_direct")
-async def book_direct(details: dict, current_user: User = Depends(get_current_user)):
+async def book_direct(
+    details: dict, 
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session)
+):
     try:
         new_appointment = Appointment(
             user_id=current_user.id,
@@ -84,15 +99,24 @@ async def book_direct(details: dict, current_user: User = Depends(get_current_us
             order_id="pay_later",
             status=AppointmentStatus.PENDING.value
         )
-        await new_appointment.insert()
+        session.add(new_appointment)
+        await session.commit()
+        await session.refresh(new_appointment)
+        
         return {"status": "success", "appointment_id": new_appointment.id}
     except Exception as e:
         print(f"Booking Error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/my_appointments")
-async def get_my_appointments(current_user: User = Depends(get_current_user)):
-    appointments = await Appointment.find(
+async def get_my_appointments(
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session)
+):
+    statement = select(Appointment).where(
         Appointment.user_id == current_user.id
-    ).sort("-created_at").to_list()
+    ).order_by(Appointment.created_at.desc())
+    
+    result = await session.execute(statement)
+    appointments = result.scalars().all()
     return appointments

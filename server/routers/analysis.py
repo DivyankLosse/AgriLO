@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, UploadFile, File
+from fastapi import APIRouter, Depends, UploadFile, File, Request
 from pydantic import BaseModel
 import asyncio
 from typing import List, Optional
@@ -11,6 +11,10 @@ from schemas import soil as soil_schemas
 from services.soil_service import soil_service
 from services.disease_service import disease_service
 from dependencies import get_current_user
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlmodel import select, col
+from database import get_session
+from utils.limiter import limiter
 
 router = APIRouter()
 
@@ -20,30 +24,29 @@ class DiseaseResponse(BaseModel):
     data: dict
 
 @router.post("/soil/analyze", response_model=soil_schemas.SoilResponse)
+@limiter.limit("10/minute")
 async def analyze_soil(
+    request: Request,
     data: soil_schemas.SoilDataInput,
     current_user: models.User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session)
 ):
-    # 1. Analyze Health
-    status, health_score = soil_service.analyze_health(data)
+    # 1. Analyze Health & Problems
+    status, health_score, problems = soil_service.analyze_health(data)
     
-    # 2. Predict Best Crop
-    recommended_crop = soil_service.predict_crop(data)
-    
-    # 3. Get Recommendations
-    recommendations = soil_service.get_recommendations(status, recommended_crop)
-    
-    # 4. Save to DB (Scan + AnalysisResult)
+    # 2. Save to DB (Scan + AnalysisResult)
     try:
         # Create Scan
         new_scan = models.Scan(
             user_id=current_user.id,
             scan_type="soil",
-            crop_name=recommended_crop,
+            crop_name="N/A",
             confidence=health_score, 
-            disease_detected=status # Using this field for status/score summary
+            disease_detected=status
         )
-        await new_scan.insert()
+        session.add(new_scan)
+        await session.commit()
+        await session.refresh(new_scan)
         
         # Create AnalysisResult
         result_data = {
@@ -54,7 +57,7 @@ async def analyze_soil(
             "moisture": data.moisture,
             "temperature": data.temperature,
             "rainfall": data.rainfall,
-            "recommendations": recommendations,
+            "problems": problems,
             "health_score": health_score
         }
         
@@ -62,7 +65,8 @@ async def analyze_soil(
             scan_id=new_scan.id,
             result_data=result_data
         )
-        await new_result.insert()
+        session.add(new_result)
+        await session.commit()
         
     except Exception as e:
         print(f"DB Error: {e}")
@@ -73,17 +77,19 @@ async def analyze_soil(
         "data": {
             "health_status": status,
             "health_score": health_score,
-            "recommended_crop": recommended_crop,
-            "recommendations": recommendations,
+            "problems": problems,
             "input_data": data.dict()
         }
     }
 
 
 @router.post("/detect", response_model=DiseaseResponse)
+@limiter.limit("5/minute")
 async def detect_disease(
+    request: Request,
     file: UploadFile = File(...),
     current_user: models.User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session)
 ):
     # 1. Read and Save File
     contents = await file.read()
@@ -97,7 +103,7 @@ async def detect_disease(
     with open(file_path, "wb") as f:
         f.write(contents)
     
-    image_url = f"http://localhost:5000/{file_path}"
+    image_url = f"{request.base_url}static/uploads/{filename}"
     
     # 2. Predict
     disease_name, confidence, treatment_info = await disease_service.predict_disease(contents)
@@ -118,13 +124,16 @@ async def detect_disease(
             disease_detected=disease_name,
             confidence=confidence
         )
-        await new_scan.insert()
+        session.add(new_scan)
+        await session.commit()
+        await session.refresh(new_scan)
         
         new_result = models.AnalysisResult(
             scan_id=new_scan.id,
             result_data=treatment_info
         )
-        await new_result.insert()
+        session.add(new_result)
+        await session.commit()
     except Exception as e:
         print(f"DB Error: {e}")
 
@@ -144,11 +153,15 @@ async def detect_disease(
 async def get_analysis_history(
     limit: int = 10,
     current_user: models.User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session)
 ):
     # Fetch Scans (Leaf, Soil, Root)
-    scans = await models.Scan.find(
-        models.Scan.user_id == current_user.id
-    ).sort("-created_at").limit(limit).to_list()
+    statement = select(models.Scan).where(
+        col(models.Scan.user_id) == current_user.id
+    ).order_by(models.Scan.created_at.desc()).limit(limit)
+    
+    result = await session.execute(statement)
+    scans = result.scalars().all()
 
     history = []
     
@@ -169,18 +182,20 @@ async def get_analysis_history(
             item["image"] = scan.image_url or "https://source.unsplash.com/random/200x200?leaf"
             
             # Load extra data manually
-            analysis_res = await models.AnalysisResult.find_one(models.AnalysisResult.scan_id == scan.id)
+            res_stmt = select(models.AnalysisResult).where(models.AnalysisResult.scan_id == scan.id)
+            res_result = await session.execute(res_stmt)
+            analysis_res = res_result.scalars().first()
             
             if analysis_res:
-                res_data = analysis_res.result_data # Beanie handles dict mapping
+                res_data = analysis_res.result_data 
                 
                 item["severity"] = res_data.get("severity")
                 item["treatment"] = res_data
 
         elif scan.scan_type == "soil":
-            item["title"] = "Soil Quality Analysis"
-            item["result"] = f"Crop: {scan.crop_name}"
-            item["status"] = scan.disease_detected # We stored status/score summary here
+            item["title"] = "Soil Health Check"
+            item["result"] = f"Status: {scan.disease_detected}"
+            item["status"] = scan.disease_detected
             item["image"] = "https://source.unsplash.com/random/200x200?soil"
             
         elif scan.scan_type == "root":
@@ -197,11 +212,15 @@ async def get_analysis_history(
 async def get_similar_cases(
     disease: str,
     limit: int = 5,
+    session: AsyncSession = Depends(get_session)
 ):
-    scans = await models.Scan.find(
+    statement = select(models.Scan).where(
         models.Scan.disease_detected == disease,
         models.Scan.scan_type == "leaf"
-    ).sort("-created_at").limit(limit).to_list()
+    ).order_by(models.Scan.created_at.desc()).limit(limit)
+    
+    result = await session.execute(statement)
+    scans = result.scalars().all()
 
     similar_cases = []
     for s in scans:

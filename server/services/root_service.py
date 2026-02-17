@@ -5,7 +5,6 @@ from PIL import Image
 import io
 import json
 import os
-import tensorflow_model_optimization as tfmot
 from config import settings
 
 class RootService:
@@ -19,6 +18,7 @@ class RootService:
              return
              
         try:
+            import tensorflow_model_optimization as tfmot
             print("[INFO] Loading Root Disease Model (Lazy Load)...")
             if os.path.exists(settings.ROOT_MODEL_PATH):
                 with tfmot.quantization.keras.quantize_scope():
@@ -57,6 +57,8 @@ class RootService:
             predicted_idx = np.argmax(predictions[0])
             confidence = float(np.max(predictions[0])) * 100
             diagnosis = self.class_labels.get(predicted_idx, "Unknown")
+            
+            print(f"\n[AI DEBUG] Root Prediction: {diagnosis} ({confidence:.2f}%)")
 
             # Simple Recommendations based on diagnosis
             recommendation = self.get_recommendation(diagnosis)

@@ -4,6 +4,9 @@ import keras
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from utils.limiter import limiter
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
 import uvicorn
 
 from routers import (
@@ -11,6 +14,7 @@ from routers import (
     analytics, support, users, soil_data, appointments
 )
 from database import init_db
+from config import settings
 from services.mqtt import mqtt_service
 
 # Create FastAPI app
@@ -19,14 +23,15 @@ app = FastAPI(
     description="Backend for Agri-Lo Smart Farming App"
 )
 
+# Initialize Limiter
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
 # ------------------ CORS (ADD THIS FIRST) ------------------
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "https://agri-lo-phi.vercel.app",
-        "http://localhost:5173",
-    ],
+    allow_origins=settings.CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],

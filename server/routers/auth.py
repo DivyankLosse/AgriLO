@@ -9,10 +9,14 @@ from schemas import auth as schemas
 from utils import auth as utils
 from config import settings
 from dependencies import get_current_active_user
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlmodel import select
+from database import get_session
+from utils.limiter import limiter
 
 router = APIRouter()
 
-async def create_auth_session(user_id: str, ip_address: str = None, device_info: str = None):
+async def create_auth_session(session: AsyncSession, user_id: str, ip_address: str = None, device_info: str = None):
     refresh_token = utils.create_refresh_token(subject=user_id)
     expires_at = datetime.utcnow() + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
     
@@ -23,18 +27,23 @@ async def create_auth_session(user_id: str, ip_address: str = None, device_info:
         device_info=device_info,
         expires_at=expires_at
     )
-    await new_session.insert()
+    session.add(new_session)
+    await session.commit()
+    await session.refresh(new_session)
     return refresh_token
 
 @router.post("/register", response_model=schemas.Token)
+@limiter.limit("3/minute")
 async def register(
     user: schemas.UserCreate, 
     response: Response, 
-    request: Request
+    request: Request,
+    session: AsyncSession = Depends(get_session)
 ):
     # Check email
     email = user.email.lower().strip()
-    existing_email = await models.User.find_one(models.User.email == email)
+    result = await session.execute(select(models.User).where(models.User.email == email))
+    existing_email = result.scalars().first()
     if existing_email:
         raise HTTPException(status_code=400, detail="Email already registered")
     
@@ -43,7 +52,8 @@ async def register(
     if phone_val and not phone_val.strip():
         phone_val = None
     elif phone_val:
-        existing_phone = await models.User.find_one(models.User.phone == phone_val)
+        result = await session.execute(select(models.User).where(models.User.phone == phone_val))
+        existing_phone = result.scalars().first()
         if existing_phone:
             raise HTTPException(status_code=400, detail="Phone number already registered")
 
@@ -58,8 +68,11 @@ async def register(
         location=user.location
     )
     try:
-        await new_user.insert()
+        session.add(new_user)
+        await session.commit()
+        await session.refresh(new_user)
     except Exception as e:
+        await session.rollback()
         raise HTTPException(status_code=500, detail=f"Registration failed: {str(e)}")
         
     # Auto-login: Create access token & session
@@ -68,7 +81,7 @@ async def register(
     # Create Refresh Token Session
     client_ip = request.client.host
     user_agent = request.headers.get("user-agent")
-    refresh_token = await create_auth_session(new_user.id, client_ip, user_agent)
+    refresh_token = await create_auth_session(session, new_user.id, client_ip, user_agent)
     
     # Set Refresh Token Cookie
     response.set_cookie(
@@ -91,13 +104,24 @@ async def register(
     }
 
 @router.post("/login", response_model=schemas.Token)
+@limiter.limit("5/minute")
 async def login(
     response: Response, 
     request: Request, 
-    form_data: OAuth2PasswordRequestForm = Depends()
+    form_data: OAuth2PasswordRequestForm = Depends(),
+    session: AsyncSession = Depends(get_session)
 ):
-    email = form_data.username.lower().strip()
-    user = await models.User.find_one(models.User.email == email)
+    username = form_data.username.strip()
+    # Check if input is likely a phone number (e.g., starts with + or is digits)
+    is_phone = username.startswith('+') or username.isdigit()
+    
+    if is_phone:
+        result = await session.execute(select(models.User).where(models.User.phone == username))
+    else:
+        email = username.lower()
+        result = await session.execute(select(models.User).where(models.User.email == email))
+        
+    user = result.scalars().first()
     
     if not user or not utils.verify_password(form_data.password, user.hashed_password):
         raise HTTPException(
@@ -111,7 +135,7 @@ async def login(
     # Create Refresh Token Session
     client_ip = request.client.host
     user_agent = request.headers.get("user-agent")
-    refresh_token = await create_auth_session(user.id, client_ip, user_agent)
+    refresh_token = await create_auth_session(session, user.id, client_ip, user_agent)
     
     # Set Refresh Token Cookie
     response.set_cookie(
@@ -137,13 +161,15 @@ async def login(
 async def refresh_token(
     response: Response, 
     request: Request, 
-    refresh_token: Optional[str] = Cookie(None)
+    refresh_token: Optional[str] = Cookie(None),
+    session: AsyncSession = Depends(get_session)
 ):
     if not refresh_token:
          raise HTTPException(status_code=401, detail="Refresh token missing")
     
     # Find session
-    auth_session = await models.AuthSession.find_one(models.AuthSession.refresh_token == refresh_token)
+    result = await session.execute(select(models.AuthSession).where(models.AuthSession.refresh_token == refresh_token))
+    auth_session = result.scalars().first()
     
     if not auth_session:
         response.delete_cookie("refresh_token")
@@ -151,12 +177,13 @@ async def refresh_token(
         
     # Check expiry
     if auth_session.expires_at.replace(tzinfo=None) < datetime.utcnow():
-        await auth_session.delete()
+        await session.delete(auth_session)
+        await session.commit()
         response.delete_cookie("refresh_token")
         raise HTTPException(status_code=401, detail="Refresh token expired")
         
     # Retrieve user manually
-    user = await models.User.get(auth_session.user_id)
+    user = await session.get(models.User, auth_session.user_id)
     
     if not user:
          raise HTTPException(status_code=401, detail="User not found")
@@ -174,15 +201,114 @@ async def refresh_token(
         "language": user.language
     }
 
+import firebase_admin
+from firebase_admin import auth as firebase_auth, credentials
+from pydantic import BaseModel
+
+# Initialize Firebase Admin with explicit Project ID
+try:
+    firebase_admin.get_app()
+except ValueError:
+    # Explicitly using the project ID helps the SDK fetch the correct public keys
+    firebase_admin.initialize_app(options={
+        'projectId': 'agrilo-1e2de'
+    })
+
+class FirebaseLoginRequest(BaseModel):
+    idToken: str
+
+@router.post("/firebase-login", response_model=schemas.Token)
+@limiter.limit("5/minute")
+async def firebase_login(
+    request_data: FirebaseLoginRequest,
+    response: Response,
+    request: Request,
+    session: AsyncSession = Depends(get_session)
+):
+    try:
+        # Verify the ID token sent by the frontend
+        # check_revoked=True is safer but requires more API calls
+        decoded_token = firebase_auth.verify_id_token(request_data.idToken)
+        
+        uid = decoded_token['uid']
+        phone_number = decoded_token.get('phone_number')
+        
+        print(f"DEBUG: Firebase Auth Success - UID: {uid}, Phone: {phone_number}")
+        
+        if not phone_number:
+            raise HTTPException(status_code=400, detail="Phone number not found in token")
+
+        # Check if user exists by phone
+        result = await session.execute(select(models.User).where(models.User.phone == phone_number))
+        user = result.scalars().first()
+
+        if not user:
+            print(f"DEBUG: Creating new user for phone {phone_number}")
+            # Create a new user if they don't exist
+            temp_email = f"user_{uid[:8]}@phone.auth"
+            user = models.User(
+                id=str(uuid.uuid4()),
+                email=temp_email,
+                phone=phone_number,
+                name=f"Farmer {phone_number[-4:]}", 
+                hashed_password="FIREBASE_AUTH", 
+                role=models.UserRole.FARMER.value,
+                language="en"
+            )
+            session.add(user)
+            await session.commit()
+            await session.refresh(user)
+
+        # Generate local JWT access token
+        access_token = utils.create_access_token(subject=user.email)
+        
+        # Create Refresh Token Session
+        client_ip = request.client.host
+        user_agent = request.headers.get("user-agent")
+        refresh_token = await create_auth_session(session, user.id, client_ip, user_agent)
+        
+        # Set Refresh Token Cookie
+        response.set_cookie(
+            key="refresh_token",
+            value=refresh_token,
+            httponly=True,
+            secure=False, 
+            samesite="lax",
+            max_age=settings.REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60
+        )
+        
+        return {
+            "access_token": access_token,
+            "token_type": "bearer",
+            "user_id": user.id,
+            "name": user.name,
+            "email": user.email,
+            "role": user.role,
+            "language": user.language
+        }
+
+    except Exception as e:
+        import traceback
+        error_msg = str(e)
+        print(f"CRITICAL: Firebase Login Error: {error_msg}")
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=401, 
+            detail=f"Authentication failed: {error_msg if len(error_msg) < 50 else 'Token verification failed'}"
+        )
+
 @router.post("/logout")
 async def logout(
     response: Response, 
-    refresh_token: Optional[str] = Cookie(None)
+    refresh_token: Optional[str] = Cookie(None),
+    session: AsyncSession = Depends(get_session)
 ):
     if refresh_token:
-        auth_session = await models.AuthSession.find_one(models.AuthSession.refresh_token == refresh_token)
+        result = await session.execute(select(models.AuthSession).where(models.AuthSession.refresh_token == refresh_token))
+        auth_session = result.scalars().first()
         if auth_session:
-            await auth_session.delete()
+            await session.delete(auth_session)
+            await session.commit()
     
     response.delete_cookie("refresh_token")
     return {"message": "Logged out successfully"}

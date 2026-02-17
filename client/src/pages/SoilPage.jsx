@@ -9,6 +9,7 @@ const SoilPage = () => {
     const [loading, setLoading] = useState(false);
     const [result, setResult] = useState(null);
     const [error, setError] = useState('');
+    const [isLiveSync, setIsLiveSync] = useState(true); // Default to live sync
 
     const [formData, setFormData] = useState({
         nitrogen: '',
@@ -19,6 +20,17 @@ const SoilPage = () => {
         temperature: '25',
         rainfall: '100'
     });
+
+    const [lastSyncData, setLastSyncData] = useState(null);
+
+    React.useEffect(() => {
+        let interval;
+        if (isLiveSync) {
+            fetchSensorData(true); // Initial fetch
+            interval = setInterval(() => fetchSensorData(true), 5000);
+        }
+        return () => clearInterval(interval);
+    }, [isLiveSync]);
 
     const simulateIoT = () => {
         // Random plausible values
@@ -33,45 +45,52 @@ const SoilPage = () => {
         });
     };
 
-    const fetchSensorData = async () => {
+    const fetchSensorData = async (autoAnalyze = false) => {
         try {
             const response = await api.get('/soil/latest');
             const data = response.data;
-            setFormData({
+
+            const newData = {
                 nitrogen: data.nitrogen,
                 phosphorus: data.phosphorus,
                 potassium: data.potassium,
                 ph: data.ph,
                 moisture: data.moisture,
                 temperature: data.temperature,
-                rainfall: '100' // sensor doesn't provide rainfall usually
-            });
+                rainfall: formData.rainfall || '100'
+            };
+
+            setFormData(newData);
+
+            // If data changed and autoAnalyze is on, trigger analysis
+            if (autoAnalyze) {
+                const dataString = JSON.stringify({ ...data, rainfall: newData.rainfall });
+                if (dataString !== lastSyncData) {
+                    setLastSyncData(dataString);
+                    performAnalysis(newData);
+                }
+            }
         } catch (err) {
             console.error("Failed to fetch sensor data", err);
-            setError("No sensor data found or connection failed.");
+            setError("Sync/Fetch Error: Check server connection or if sensors are active.");
         }
     };
 
-    const handleChange = (e) => {
-        setFormData({ ...formData, [e.target.name]: e.target.value });
-    };
-
-    const handleSubmit = async (e) => {
-        e.preventDefault();
+    const performAnalysis = async (payload) => {
         setLoading(true);
         setError('');
         try {
-            const payload = {
-                nitrogen: parseInt(formData.nitrogen),
-                phosphorus: parseInt(formData.phosphorus),
-                potassium: parseInt(formData.potassium),
-                ph: parseFloat(formData.ph),
-                moisture: parseFloat(formData.moisture),
-                temperature: parseFloat(formData.temperature),
-                rainfall: parseFloat(formData.rainfall)
+            const formattedPayload = {
+                nitrogen: parseInt(payload.nitrogen),
+                phosphorus: parseInt(payload.phosphorus),
+                potassium: parseInt(payload.potassium),
+                ph: parseFloat(payload.ph),
+                moisture: parseFloat(payload.moisture),
+                temperature: parseFloat(payload.temperature),
+                rainfall: parseFloat(payload.rainfall)
             };
 
-            const response = await api.post('/analysis/soil/analyze', payload);
+            const response = await api.post('/analysis/soil/analyze', formattedPayload);
             setResult(response.data.data);
         } catch (err) {
             console.error(err);
@@ -81,185 +100,70 @@ const SoilPage = () => {
         }
     };
 
+    const handleChange = (e) => {
+        setFormData({ ...formData, [e.target.name]: e.target.value });
+    };
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        performAnalysis(formData);
+    };
+
     return (
         <div className="flex flex-col gap-8 max-w-6xl mx-auto w-full pb-10">
             <div className="text-center md:text-left">
                 <h1 className="text-3xl font-black text-text-main dark:text-white leading-tight tracking-[-0.033em]">
-                    Soil Quality Analysis
+                    Soil Monitor
                 </h1>
                 <p className="text-text-light dark:text-text-secondary-dark mt-2">
-                    Enter sensor data or simulate IoT readings to get AI-powered crop recommendations.
+                    Real-time data from your IoT sensors. Full analysis is available on the <a href="/analytics" className="text-primary hover:underline">Analytics Dashboard</a>.
                 </p>
             </div>
 
             <div className="grid lg:grid-cols-12 gap-8 items-start">
-
-                {/* Left Column: Input Form */}
-                <div className="lg:col-span-5 flex flex-col gap-6">
-                    <div className="p-6 rounded-2xl bg-white dark:bg-surface-dark border border-[#f0f4f0] dark:border-[#2a3c2e] shadow-sm">
-                        <div className="flex items-center justify-between mb-6">
-                            <h3 className="text-lg font-bold text-text-main dark:text-white flex items-center gap-2">
-                                <span className="material-symbols-outlined text-primary">sensors</span>
-                                Sensor Data
-                            </h3>
-                            <button
-                                type="button"
-                                onClick={fetchSensorData}
-                                className="px-3 py-1.5 rounded-lg border border-primary text-primary hover:bg-primary/5 text-xs font-bold flex items-center gap-1 transition-colors"
+                {/* Sensors Grid */}
+                <div className="lg:col-span-12">
+                    <div className="p-8 rounded-3xl bg-white dark:bg-surface-dark border border-[#f0f4f0] dark:border-[#2a3c2e] shadow-xl">
+                        <div className="flex items-center justify-between mb-8">
+                            <div className="flex items-center gap-3">
+                                <div className="size-12 rounded-2xl bg-primary/10 flex items-center justify-center">
+                                    <span className="material-symbols-outlined text-primary text-3xl">sensors</span>
+                                </div>
+                                <h3 className="text-xl font-bold text-text-main dark:text-white tracking-tight">Active Sensors</h3>
+                            </div>
+                            <div
+                                onClick={() => setIsLiveSync(!isLiveSync)}
+                                className={`flex items-center gap-2 px-4 py-2 rounded-xl border cursor-pointer transition-all ${isLiveSync ? 'bg-green-50 border-green-200 text-green-700 shadow-sm shadow-green-100' : 'bg-gray-50 border-gray-200 text-gray-400'}`}
                             >
-                                <span className="material-symbols-outlined text-sm">sync</span>
-                                Sync Sensor
-                            </button>
-                            <button
-                                type="button"
-                                onClick={simulateIoT}
-                                className="px-3 py-1.5 rounded-lg border border-primary text-primary hover:bg-primary/5 text-xs font-bold flex items-center gap-1 transition-colors"
-                            >
-                                <span className="material-symbols-outlined text-sm">wifi_tethering</span>
-                                Simulate IoT
-                            </button>
+                                <span className={`relative flex h-2.5 w-2.5 ${!isLiveSync && 'hidden'}`}>
+                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500"></span>
+                                </span>
+                                <span className="text-xs font-black uppercase tracking-widest">{isLiveSync ? 'Live Mode' : 'Paused'}</span>
+                            </div>
                         </div>
 
-                        <form onSubmit={handleSubmit} className="space-y-4">
-                            <div className="space-y-4">
-                                <p className="text-xs font-bold text-text-light dark:text-text-secondary-dark uppercase tracking-wider">Nutrients (mg/kg)</p>
-                                <div className="grid grid-cols-3 gap-3">
-                                    {[
-                                        { label: 'N', name: 'nitrogen', color: 'border-blue-200 focus:border-blue-500' },
-                                        { label: 'P', name: 'phosphorus', color: 'border-orange-200 focus:border-orange-500' },
-                                        { label: 'K', name: 'potassium', color: 'border-purple-200 focus:border-purple-500' }
-                                    ].map((field) => (
-                                        <div key={field.name}>
-                                            <label className="block text-xs font-bold text-text-main dark:text-white mb-1.5 text-center">{field.label}</label>
-                                            <input
-                                                type="number"
-                                                name={field.name}
-                                                value={formData[field.name]}
-                                                onChange={handleChange}
-                                                required
-                                                className={`w-full h-12 px-3 text-center rounded-xl bg-[#f0f4f0] dark:bg-white/5 border border-transparent focus:bg-white dark:focus:bg-[#1a2e1d] outline-none transition-all font-bold text-lg ${field.color}`}
-                                                placeholder="0"
-                                            />
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-
-                            <div className="space-y-4 pt-2">
-                                <p className="text-xs font-bold text-text-light dark:text-text-secondary-dark uppercase tracking-wider">Conditions</p>
-                                <div className="grid grid-cols-2 gap-4">
-                                    {[
-                                        { label: 'pH Level', name: 'ph', step: '0.1', icon: 'science' },
-                                        { label: 'Moisture %', name: 'moisture', step: '1', icon: 'water_drop' },
-                                        { label: 'Temp (°C)', name: 'temperature', step: '1', icon: 'thermostat' },
-                                        { label: 'Rainfall (mm)', name: 'rainfall', step: '1', icon: 'rainy' }
-                                    ].map((field) => (
-                                        <div key={field.name}>
-                                            <label className="block text-xs font-medium text-text-light dark:text-text-secondary-dark mb-1.5">{field.label}</label>
-                                            <div className="relative">
-                                                <input
-                                                    type="number"
-                                                    step={field.step}
-                                                    name={field.name}
-                                                    value={formData[field.name]}
-                                                    onChange={handleChange}
-                                                    required
-                                                    className="w-full h-11 pl-10 pr-3 rounded-xl bg-[#f0f4f0] dark:bg-white/5 border border-transparent focus:bg-white dark:focus:bg-[#1a2e1d] focus:border-primary/50 outline-none transition-all font-medium"
-                                                    placeholder="0"
-                                                />
-                                                <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">{field.icon}</span>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-
-                            <button
-                                type="submit"
-                                disabled={loading}
-                                className={`w-full h-14 mt-4 rounded-xl font-bold text-lg shadow-lg flex items-center justify-center gap-2 transition-all ${loading ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-primary text-white hover:bg-green-600 hover:scale-[1.02] shadow-primary/30'}`}
-                            >
-                                {loading ? (
-                                    <>
-                                        <span className="size-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                                        Analyzing...
-                                    </>
-                                ) : (
-                                    <>
-                                        <span className="material-symbols-outlined">analytics</span>
-                                        Analyze Soil
-                                    </>
-                                )}
-                            </button>
-                        </form>
-                        {error && <p className="text-red-500 text-sm font-medium mt-3 text-center bg-red-50 dark:bg-red-900/20 py-2 rounded-lg">{error}</p>}
-                    </div>
-                </div>
-
-                {/* Right Column: Results Section */}
-                <div className="lg:col-span-7">
-                    <div className={`h-full min-h-[500px] rounded-2xl bg-white dark:bg-surface-dark border border-[#f0f4f0] dark:border-[#2a3c2e] shadow-sm p-6 relative overflow-hidden transition-all ${!result ? 'flex items-center justify-center' : ''}`}>
-
-                        {!result ? (
-                            <div className="text-center text-text-light dark:text-text-secondary-dark flex flex-col items-center gap-4 max-w-sm mx-auto">
-                                <div className="size-20 rounded-full bg-[#f0f4f0] dark:bg-[#2a3c2e] flex items-center justify-center">
-                                    <span className="material-symbols-outlined text-4xl text-gray-400">query_stats</span>
-                                </div>
-                                <div>
-                                    <h3 className="text-lg font-bold text-text-main dark:text-white">Analysis Pending</h3>
-                                    <p className="text-sm mt-1">Fill in the sensor data on the left or click "Simulate IoT" to see AI recommendations.</p>
-                                </div>
-                            </div>
-                        ) : (
-                            <div className="fade-in space-y-8">
-                                <div className="flex items-center justify-between border-b border-[#f0f4f0] dark:border-[#2a3c2e] pb-6">
-                                    <div>
-                                        <p className="text-xs font-bold text-text-light dark:text-text-secondary-dark uppercase tracking-wider mb-1">Health Score</p>
-                                        <div className="flex items-baseline gap-3">
-                                            <h2 className="text-4xl font-black text-text-main dark:text-white">{result.health_score}</h2>
-                                            <span className={`px-3 py-1 rounded-full text-xs font-bold ${result.health_status === 'Good' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}`}>
-                                                {result.health_status}
-                                            </span>
-                                        </div>
+                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                            {[
+                                { label: 'Nitrogen', value: formData.nitrogen, unit: 'mg/kg', icon: 'N', color: 'text-blue-500', bg: 'bg-blue-50' },
+                                { label: 'Phosphorus', value: formData.phosphorus, unit: 'mg/kg', icon: 'P', color: 'text-orange-500', bg: 'bg-orange-50' },
+                                { label: 'Potassium', value: formData.potassium, unit: 'mg/kg', icon: 'K', color: 'text-purple-500', bg: 'bg-purple-50' },
+                                { label: 'pH Level', value: formData.ph, unit: 'pH', icon: 'science', color: 'text-emerald-500', bg: 'bg-emerald-50' },
+                                { label: 'Moisture', value: formData.moisture, unit: '%', icon: 'water_drop', color: 'text-cyan-500', bg: 'bg-cyan-50' },
+                                { label: 'Temperature', value: formData.temperature, unit: '°C', icon: 'thermostat', color: 'text-red-500', bg: 'bg-red-50' }
+                            ].map((s) => (
+                                <div key={s.label} className="p-6 rounded-2xl bg-[#f8faf8] dark:bg-white/5 border border-transparent hover:border-primary/20 transition-all">
+                                    <div className="flex items-center justify-between mb-4">
+                                        <span className={`size-10 rounded-xl ${s.bg} flex items-center justify-center font-bold ${s.color}`}>
+                                            {s.icon.length > 1 ? <span className="material-symbols-outlined">{s.icon}</span> : s.icon}
+                                        </span>
+                                        <span className="text-[10px] font-black text-text-light uppercase tracking-tighter opacity-50">{s.unit}</span>
                                     </div>
-                                    <div className="text-right">
-                                        <p className="text-xs font-bold text-text-light dark:text-text-secondary-dark uppercase tracking-wider mb-1">Recommended Crop</p>
-                                        <h2 className="text-3xl font-black text-primary">{result.recommended_crop}</h2>
-                                    </div>
+                                    <h4 className="text-sm font-bold text-text-light mb-1">{s.label}</h4>
+                                    <p className="text-3xl font-black text-text-main dark:text-white">{s.value || '0'}</p>
                                 </div>
-
-                                <div className="grid md:grid-cols-2 gap-6">
-                                    <div>
-                                        <h4 className="text-sm font-bold text-text-main dark:text-white mb-4 flex items-center gap-2">
-                                            <span className="material-symbols-outlined text-primary text-lg">donut_small</span>
-                                            Nutrient Balance
-                                        </h4>
-                                        <div className="bg-[#f0f4f0] dark:bg-white/5 rounded-xl p-4">
-                                            {/* Reuse existing NPKChart or simplified bars if preferred. Using Chart component for now */}
-                                            <NPKChart
-                                                nitrogen={result.input_data.nitrogen}
-                                                phosphorus={result.input_data.phosphorus}
-                                                potassium={result.input_data.potassium}
-                                            />
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <h4 className="text-sm font-bold text-text-main dark:text-white mb-4 flex items-center gap-2">
-                                            <span className="material-symbols-outlined text-primary text-lg">checklist</span>
-                                            Action Plan
-                                        </h4>
-                                        <ul className="space-y-3">
-                                            {result.recommendations.map((rec, i) => (
-                                                <li key={i} className="flex items-start gap-3 text-sm text-text-main dark:text-white">
-                                                    <span className="material-symbols-outlined text-green-500 text-lg mt-0.5">check_circle</span>
-                                                    <span className="leading-snug">{rec}</span>
-                                                </li>
-                                            ))}
-                                        </ul>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
+                            ))}
+                        </div>
                     </div>
                 </div>
             </div>

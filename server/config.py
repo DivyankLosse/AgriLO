@@ -9,7 +9,7 @@ class Settings(BaseSettings):
     """Application configuration settings."""
     
     # Database
-    DATABASE_URL: str = "mongodb+srv://AgriLo:Agri1234567890@agrilo.9xrxozz.mongodb.net/agrilo"
+    DATABASE_URL: str = "sqlite+aiosqlite:///./farming.db"
     
     # Security
     SECRET_KEY: str = "your-secret-key-change-in-production"
@@ -24,10 +24,10 @@ class Settings(BaseSettings):
     
     # AI Services
     GEMINI_API_KEY: Optional[str] = None
-    GROQ_API_KEY: Optional[str] =None
+    GROQ_API_KEY: Optional[str] = None
     
     # Model Paths
-    LEAF_MODEL_PATH: str = os.path.join(BASE_DIR, "models/leaf_model.h5")
+    LEAF_MODEL_PATH: str = os.path.join(BASE_DIR, "models/final_model.h5")
     SOIL_MODEL_PATH: str = os.path.join(BASE_DIR, "models/soil_model.pkl")
     LABEL_ENCODER_PATH: str = os.path.join(BASE_DIR, "models/label_encoder.pkl")
     CLASS_INDICES_PATH: str = os.path.join(BASE_DIR, "models/class_indices.json")
@@ -46,7 +46,8 @@ class Settings(BaseSettings):
     # MQTT Hardware
     MQTT_BROKER: str = "localhost"
     MQTT_PORT: int = 1883
-    MQTT_TOPIC: str = "farm/soil/data"
+    MQTT_TOPIC: str = "farm/soil/node01/data"
+    SOIL_RAW_SCALE: float = 0.1 # Raw 800 -> 80 mg/kg
     
     model_config = SettingsConfigDict(env_file=os.path.join(BASE_DIR, ".env"), env_file_encoding="utf-8")
 

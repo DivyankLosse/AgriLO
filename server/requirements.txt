@@ -2,43 +2,45 @@
 paho-mqtt>=1.6.1
 
 # Core Framework
-fastapi>=0.109.0
-uvicorn[standard]>=0.27.0
-python-multipart>=0.0.9
+fastapi
+uvicorn[standard]
+python-multipart
 
 # Database
-motor>=3.3.0
-beanie>=1.25.0
-certifi>=2024.2.2
+sqlmodel
+aiosqlite
 
 # Authentication
-python-jose[cryptography]>=3.3.0
-passlib[argon2]>=1.7.4
+python-jose[cryptography]
+passlib[argon2]
 
 # Configuration
-pydantic-settings>=2.1.0
-email-validator>=2.1.0
-python-dotenv>=1.0.0
+pydantic-settings
+email-validator
+python-dotenv
 
-# AI/ML
-tensorflow==2.16.1
-tensorflow-model-optimization==0.8.0
-scikit-learn==1.5.1
-joblib>=1.3.0
-tf-keras==2.16.0
-
+# AI/ML - Relaxed to avoid conflicts on Python 3.13
+tensorflow
+tensorflow-model-optimization
+scikit-learn
+joblib
+tf-keras
 
 # Data Processing
-pandas>=2.2.0
-numpy>=1.26.0
-Pillow>=10.2.0
+pandas
+numpy
+Pillow
 
 # AI Chatbot
-google-generativeai>=0.4.0
-groq>=0.4.0
+google-generativeai
+groq
 
 # HTTP Client
-httpx>=0.26.0
+httpx
 
 # Payments
-razorpay>=1.3.0
+razorpay
+
+# Authentication (Firebase)
+firebase-admin
+slowapi

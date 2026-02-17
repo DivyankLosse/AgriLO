@@ -32,7 +32,13 @@ class FertilizerService:
         return {
             "fertilizer": recommendation,
             "description": f"Based on N: {n}, P: {p}, K: {k} for {crop}.",
-            "usage": "Apply during early growth stage. Consult local expert for exact dosage."
+            "usage": "Apply during early growth stage.",
+            "disclaimer": "IMPORTANT: This is an AI-generated recommendation based on current sensor data. Always cross-verify with a certified soil laboratory or local agricultural expert before bulk application.",
+            "next_steps": [
+                "Verify dosage with a professional",
+                "Check weather forecast before application",
+                "Ensure proper soil moisture before fertilizing"
+            ]
         }
 
 fertilizer_service = FertilizerService()

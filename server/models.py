@@ -1,5 +1,5 @@
-from beanie import Document, Indexed
-from pydantic import Field, EmailStr
+from sqlmodel import SQLModel, Field
+from sqlalchemy import JSON, Column
 from typing import Optional, Dict, Any
 from datetime import datetime
 import uuid
@@ -22,39 +22,36 @@ class AppointmentStatus(str, enum.Enum):
     COMPLETED = "completed"
     CANCELLED = "cancelled"
 
-class User(Document):
-    id: str = Field(default_factory=lambda: str(uuid.uuid4()), alias="_id")
+class User(SQLModel, table=True):
+    __tablename__ = "users"
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
     name: str = Field(max_length=100)
-    email: Indexed(str, unique=True) # type: ignore
+    email: str = Field(unique=True, index=True)
     phone: Optional[str] = Field(default=None, max_length=15)
     hashed_password: str
     role: str = Field(default=UserRole.FARMER.value)
     language: str = Field(default="en")
-    location: Optional[Dict[str, Any]] = None
-    settings: Optional[Dict[str, Any]] = Field(default={})
+    location: Optional[Dict[str, Any]] = Field(default=None, sa_column=Column(JSON))
+    settings: Optional[Dict[str, Any]] = Field(default={}, sa_column=Column(JSON))
     is_verified: bool = Field(default=False)
     is_active: bool = Field(default=True)
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: Optional[datetime] = Field(default=None)
-    
-    class Settings:
-        name = "users"
 
-class AuthSession(Document):
-    id: str = Field(default_factory=lambda: str(uuid.uuid4()), alias="_id")
-    user_id: str = Field(index=True) # type: ignore
+class AuthSession(SQLModel, table=True):
+    __tablename__ = "auth_sessions"
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
+    user_id: str = Field(index=True)
     refresh_token: str
     device_info: Optional[str] = None
     ip_address: Optional[str] = None
     expires_at: datetime
     created_at: datetime = Field(default_factory=datetime.utcnow)
-    
-    class Settings:
-        name = "auth_sessions"
 
-class Scan(Document):
-    id: str = Field(default_factory=lambda: str(uuid.uuid4()), alias="_id")
-    user_id: str = Field(index=True) # type: ignore
+class Scan(SQLModel, table=True):
+    __tablename__ = "scans"
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
+    user_id: str = Field(index=True)
     scan_type: str # leaf, soil, root
     crop_name: Optional[str] = None
     image_url: Optional[str] = None
@@ -63,25 +60,21 @@ class Scan(Document):
     # Generic status/summary fields
     disease_detected: Optional[str] = None
     confidence: Optional[float] = None
-    
-    class Settings:
-        name = "scans"
 
-class AnalysisResult(Document):
-    id: str = Field(default_factory=lambda: str(uuid.uuid4()), alias="_id")
-    scan_id: str = Field(index=True) # type: ignore
+class AnalysisResult(SQLModel, table=True):
+    __tablename__ = "analysis_results"
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
+    scan_id: str = Field(index=True)
     
-    result_data: Dict[str, Any] = Field(default={})
+    result_data: Dict[str, Any] = Field(default={}, sa_column=Column(JSON))
     
     created_at: datetime = Field(default_factory=datetime.utcnow)
-    
-    class Settings:
-        name = "analysis_results"
 
-class ExpertQuery(Document):
-    id: str = Field(default_factory=lambda: str(uuid.uuid4()), alias="_id")
-    user_id: str = Field(index=True) # type: ignore
-    expert_id: Optional[str] = Field(default=None, index=True) # type: ignore
+class ExpertQuery(SQLModel, table=True):
+    __tablename__ = "expert_queries"
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
+    user_id: str = Field(index=True)
+    expert_id: Optional[str] = Field(default=None, index=True)
     scan_id: Optional[str] = None
     
     question: str
@@ -90,33 +83,27 @@ class ExpertQuery(Document):
     
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: Optional[datetime] = None
-    
-    class Settings:
-        name = "expert_queries"
 
-class ChatHistory(Document):
-    id: str = Field(default_factory=lambda: str(uuid.uuid4()), alias="_id")
-    user_id: str = Field(index=True) # type: ignore
+class ChatHistory(SQLModel, table=True):
+    __tablename__ = "chat_history"
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
+    user_id: str = Field(index=True)
     role: str # "user" or "bot"
     message: str
     created_at: datetime = Field(default_factory=datetime.utcnow)
-    
-    class Settings:
-        name = "chat_history"
 
-class SupportTicket(Document):
-    id: str = Field(default_factory=lambda: str(uuid.uuid4()), alias="_id")
-    user_id: str = Field(index=True) # type: ignore
+class SupportTicket(SQLModel, table=True):
+    __tablename__ = "support_tickets"
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
+    user_id: str = Field(index=True)
     subject: str
     message: str
     status: str = Field(default="Open")
     created_at: datetime = Field(default_factory=datetime.utcnow)
-    
-    class Settings:
-        name = "support_tickets"
 
-class SoilData(Document):
-    id: str = Field(default_factory=lambda: str(uuid.uuid4()), alias="_id")
+class SoilData(SQLModel, table=True):
+    __tablename__ = "soil_data"
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
     timestamp: datetime = Field(default_factory=datetime.utcnow)
     node_id: str
     nitrogen: int
@@ -126,13 +113,11 @@ class SoilData(Document):
     moisture: float
     temperature: float
     ec: float
-    
-    class Settings:
-        name = "soil_data"
 
-class Appointment(Document):
-    id: str = Field(default_factory=lambda: str(uuid.uuid4()), alias="_id")
-    user_id: str = Field(index=True) # type: ignore
+class Appointment(SQLModel, table=True):
+    __tablename__ = "appointments"
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
+    user_id: str = Field(index=True)
     name: str # Contact name
     phone: str
     date: datetime
@@ -142,6 +127,3 @@ class Appointment(Document):
     order_id: Optional[str] = None
     status: str = Field(default=AppointmentStatus.PENDING.value)
     created_at: datetime = Field(default_factory=datetime.utcnow)
-
-    class Settings:
-        name = "appointments"

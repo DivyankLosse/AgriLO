@@ -7,7 +7,8 @@ from config import settings
 from models import SoilData
 
 # Use sync engine
-SYNC_DATABASE_URL = settings.DATABASE_URL.replace("+aiosqlite", "")
+DB_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "farming.db")
+SYNC_DATABASE_URL = f"sqlite:///{DB_PATH}"
 engine = create_engine(SYNC_DATABASE_URL)
 
 def check_data():

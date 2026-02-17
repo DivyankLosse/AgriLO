@@ -13,3 +13,7 @@ static/uploads/
 .venv/
 server/.venv/
 client/node_modules/
+server/static/uploads/
+*.log
+.vscode/
+server/mqtt_data/

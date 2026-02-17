@@ -176,7 +176,7 @@ const LandingPage = () => {
                         </div>
                         <span className="text-xl font-bold tracking-tight text-text-main dark:text-white">Agri-Lo</span>
                     </div>
-                    <p className="text-text-light dark:text-text-secondary-dark text-sm">© 2024 Agri-Lo. All rights reserved.</p>
+                    <p className="text-text-light dark:text-text-secondary-dark text-sm">© 2026 Agri-Lo. All rights reserved.</p>
                     <div className="flex gap-6">
                         <a href="#" className="text-text-light dark:text-text-secondary-dark hover:text-primary transition-colors">Privacy</a>
                         <a href="#" className="text-text-light dark:text-text-secondary-dark hover:text-primary transition-colors">Terms</a>

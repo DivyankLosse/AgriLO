@@ -1,120 +1,180 @@
-﻿# Agri-Lo: Smart Farming Assistant 🌱
+# 🌱 Agri-Lo — AI-Powered Smart Farming Assistant
 
 ![Agri-Lo Banner](https://img.shields.io/badge/Agri--Lo-Smart%20Farming-forestgreen?style=for-the-badge&logo=leaf)
 ![License](https://img.shields.io/github/license/DivyankLosse/AgriLO?style=for-the-badge)
 ![Status](https://img.shields.io/badge/Status-Active-success?style=for-the-badge)
 ![Tech Stack](https://img.shields.io/badge/Stack-MERN%20%2B%20Python-blue?style=for-the-badge)
 
-**Agri-Lo** is a comprehensive smart farming platform designed to empower farmers with AI-driven insights. It combines IoT data, machine learning models, and expert agricultural knowledge to provide real-time soil analysis, disease detection, and crop recommendations.
+> **Agri-Lo** is an end-to-end **AI + IoT powered smart farming platform** that enables farmers to make **data-driven decisions** using real-time soil data, plant disease detection, and intelligent agricultural recommendations.
 
-## 🚀 Key Features
+---
 
-*   **🌱 Soil Health Analysis**: Real-time monitoring of NPK values, pH, moisture, and temperature via IoT sensors.
-*   **🧪 Book Expert Soil Tests**: Schedule professional soil testing appointments with integrated Razorpay payments (₹199).
-*   **🍂 Disease Detection**: Upload photos of leaves or roots to instantly detect diseases using our advanced AI models.
-*   **💬 AI Agri-Chatbot**: Get instant answers to your farming queries in multiple languages (English, Hindi, Marathi).
-*   **📊 Smart Dashboard**: Visual analytics of your farm's health trends and historical data.
-*   **🛒 Market Insights**: Stay updated with real-time crop prices and localized market trends.
+## 🌾 Why Agri-Lo?
+
+Modern farming often depends on guesswork, delayed lab reports, and fragmented tools.  
+Agri-Lo bridges this gap by combining **IoT sensors, AI models, and real-time analytics** into one unified platform for precision agriculture.
+
+---
+
+## 🚀 Core Features
+
+### 🌱 Soil Health Monitoring (IoT)
+- Live NPK (Nitrogen, Phosphorus, Potassium) readings  
+- pH, moisture & temperature tracking  
+- ESP32-based sensor integration using MQTT  
+
+### 🧪 Expert Soil Testing
+- Book professional soil testing services  
+- Razorpay payment integration (₹199)  
+- Digital soil health reports  
+
+### 🍂 AI Disease Detection
+- Upload leaf or root images  
+- CNN-based deep learning disease classification  
+- Instant results with treatment suggestions  
+
+### 💬 Multilingual AI Agri-Chatbot
+- AI-powered farming assistant  
+- Supports English, Hindi & Marathi  
+- Crop-specific recommendations  
+
+### 📊 Smart Analytics Dashboard
+- Interactive charts and trends  
+- Historical soil & crop health data  
+- Decision-support visuals  
+
+### 🛒 Market Insights
+- Real-time crop prices  
+- Local mandi trends  
+- Smarter selling decisions  
+
+---
 
 ## 🛠️ Tech Stack
 
 ### Frontend
-*   **React (Vite)**: Fast, modern UI with Tailwind CSS.
-*   **Material Symbols**: Clean and intuitive iconography.
-*   **Recharts**: Interactive data visualization.
+- React (Vite)
+- Tailwind CSS
+- Material Symbols
+- Recharts
 
 ### Backend & AI
-*   **FastAPI**: High-performance Python backend.
-*   **MongoDB (Beanie)**: Scalable, document-oriented database.
-*   **TensorFlow/Keras**: Deep learning models for disease detection.
-*   **Razorpay**: Secure payment gateway integration.
+- FastAPI
+- MongoDB with Beanie ODM
+- TensorFlow / Keras
+- Razorpay API
 
 ### IoT & Hardware
-*   **ESP32**: Microcontroller for sensor data collection.
-*   **MQTT**: Lightweight messaging protocol for real-time data transmission.
+- ESP32
+- MQTT Protocol
+
+---
 
 ## 📦 Installation & Setup
 
-## 🚀 Quick Start
+### ⚡ Quick Start (Recommended)
+```bash
+setup.bat
+````
 
-### One-Click Setup (Recommended)
-Double-click `setup.bat` in the root directory. This will:
-*   Verify Python, Node.js, and npm.
-*   Create a virtual environment and install backend dependencies.
-*   Install frontend dependencies.
-*   Configure necessary directories.
+This script verifies dependencies, sets up the backend and frontend, and prepares the environment automatically.
 
-### Manual Setup
-If you prefer manual setup, follow these steps:
+---
 
-### 1. Prerequisites
-- Python 3.9+
-- Node.js & npm
-- MongoDB & Mosquitto (Optional for basic features)
+### 🔧 Manual Setup
 
-### 2. Backend Setup
+#### Prerequisites
+
+* Python 3.9+
+* Node.js & npm
+* MongoDB (optional)
+* Mosquitto MQTT (optional)
+
+#### Backend Setup
+
 ```bash
 python -m venv .venv
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+source .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install -r server/requirements.txt
 ```
-Create a `.env` file in the root directory (based on `.env.example`).
 
-### 3. Frontend Setup
+Create a `.env` file using `.env.example`.
+
+#### Frontend Setup
+
 ```bash
 cd client
 npm install
 npm run dev
 ```
 
-## 🏃 Running the App
-Once setup is complete, run:
+---
+
+## ▶️ Running the Application
+
 ```bash
 start_app.bat
 ```
-This will launch both the backend and frontend servers.
+
+Starts both FastAPI backend and React frontend.
+
+---
 
 ## 📸 Screenshots
-<img width="1919" height="912" alt="landing page 1" src="https://github.com/user-attachments/assets/9c77d066-2544-4f88-9510-1ffd8fdc39e5" />
-<img width="1899" height="823" alt="landing page 2" src="https://github.com/user-attachments/assets/59155fc0-6d22-4141-a12a-b615c0da3879" />
-Landing Page
 
-<img width="1919" height="913" alt="dashboard" src="https://github.com/user-attachments/assets/a78055a5-2966-4575-861a-0ed1f90825ae" />
-Dashboard
+### Landing Page
 
-<img width="1919" height="912" alt="leaf analysis" src="https://github.com/user-attachments/assets/056c12a7-6ab9-45d9-9e31-7730879a6540" />
-Leaf Analysis
+<img src="https://github.com/user-attachments/assets/9c77d066-2544-4f88-9510-1ffd8fdc39e5" width="100%" />
 
-<img width="1919" height="912" alt="root analysis" src="https://github.com/user-attachments/assets/1f229fa0-1ad5-456e-af1a-d4376a639a38" />
-Root Analysis
+### Dashboard
 
-<img width="1919" height="910" alt="soil analysis" src="https://github.com/user-attachments/assets/db384e1e-af91-449f-9d16-14f09b08a530" />
-Soil Analysis using NPK Sensor
+<img src="https://github.com/user-attachments/assets/a78055a5-2966-4575-861a-0ed1f90825ae" width="100%" />
 
-<img width="1919" height="908" alt="support" src="https://github.com/user-attachments/assets/6cb8d4be-c80a-428b-94d8-6ebf08697b86" />
-Support
+### Leaf Disease Detection
 
-<img width="1919" height="908" alt="ai chat bot" src="https://github.com/user-attachments/assets/c1b13b83-67b5-4e8c-9487-63ddfe2d4726" />
-Ai Chatbot
+<img src="https://github.com/user-attachments/assets/056c12a7-6ab9-45d9-9e31-7730879a6540" width="100%" />
 
+### Root Disease Detection
+
+<img src="https://github.com/user-attachments/assets/1f229fa0-1ad5-456e-af1a-d4376a639a38" width="100%" />
+
+### Soil Analysis (NPK Sensor)
+
+<img src="https://github.com/user-attachments/assets/db384e1e-af91-449f-9d16-14f09b08a530" width="100%" />
+
+### AI Chatbot
+
+<img src="https://github.com/user-attachments/assets/c1b13b83-67b5-4e8c-9487-63ddfe2d4726" width="100%" />
+
+---
 
 ## 🤝 Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+1. Fork the repository
+2. Create a feature branch
 
-1.  Fork the Project
-2.  Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
-3.  Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
-4.  Push to the Branch (`git push origin feature/AmazingFeature`)
-5.  Open a Pull Request
+   ```bash
+   git checkout -b feature/YourFeature
+   ```
+3. Commit your changes
+
+   ```bash
+   git commit -m "Add YourFeature"
+   ```
+4. Push to the branch and open a Pull Request
+
+---
 
 ## 📄 License
 
-Distributed under the MIT License. See `LICENSE` for more information.
+This project is licensed under the **MIT License**.
+See the `LICENSE` file for more information.
 
 ---
 
 <p align="center">
-  Made with ❤️ by Divyank Losse
+  🌾 Built for farmers, powered by AI  
+  <br/>
+  <strong>Made with ❤️ by Divyank Losse</strong>
 </p>
-
+```

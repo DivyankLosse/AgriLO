@@ -4,6 +4,7 @@ paho-mqtt>=1.6.1
 # Core Framework
 fastapi
 uvicorn[standard]
+gunicorn
 python-multipart
 
 # Database

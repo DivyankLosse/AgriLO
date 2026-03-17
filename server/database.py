@@ -10,7 +10,13 @@ if db_url.startswith("sqlite") and "aiosqlite" not in db_url:
 elif db_url.startswith("postgres") and "asyncpg" not in db_url:
     db_url = db_url.replace("postgresql://", "postgresql+asyncpg://").replace("postgres://", "postgresql+asyncpg://")
 
-engine = create_async_engine(db_url, echo=settings.DEBUG, future=True)
+# For production/cloud DBs (like Supabase), we might need to handle SSL
+connect_args = {}
+if "supabase.co" in db_url:
+    # Use SSL for Supabase connections
+    connect_args = {"ssl": True}
+
+engine = create_async_engine(db_url, echo=settings.DEBUG, future=True, connect_args=connect_args)
 
 async def init_db():
     async with engine.begin() as conn:

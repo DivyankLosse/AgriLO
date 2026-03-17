@@ -7,15 +7,24 @@ ENV PYTHONUNBUFFERED 1
 
 WORKDIR /app
 
-# Install system build dependencies
+# Install system build dependencies (expanded for TensorFlow)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     libpq-dev \
+    gcc \
+    g++ \
+    libglib2.0-0 \
+    libsm6 \
+    libxext6 \
+    libxrender-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Create virtualenv to isolate dependencies
 RUN python -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
+
+# 🔥 Upgrade pip (CRITICAL FIX)
+RUN pip install --upgrade pip setuptools wheel
 
 # Install dependencies
 COPY requirements.txt .
@@ -32,10 +41,14 @@ ENV PORT=8000
 
 WORKDIR /app
 
-# Install runtime system dependencies (libpq for postgreSQL if needed, and sqlite is built-in)
+# Install runtime dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq5 \
     ca-certificates \
+    libglib2.0-0 \
+    libsm6 \
+    libxext6 \
+    libxrender1 \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy virtualenv from builder
@@ -47,7 +60,7 @@ COPY . .
 # Ensure scripts are executable
 RUN chmod +x entrypoint.sh
 
-# Expose port (using default 8000 for FastAPI instead of 5000)
+# Expose port
 EXPOSE 8000
 
 # Set entrypoint

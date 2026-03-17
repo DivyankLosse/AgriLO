@@ -44,8 +44,7 @@ class Settings(BaseSettings):
     CORS_ORIGINS: list = [
         "http://localhost:5173", 
         "http://localhost:3000",
-        "https://agri-lo-ivory.vercel.app",
-        "https://agri-lo.vercel.app"
+        "https://agri-lo-six.vercel.app/",
     ]
     
     # App Info

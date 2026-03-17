@@ -1,17 +1,16 @@
-# Agri-Lo Backend Dependencies
+# MQTT
 paho-mqtt>=1.6.1
 
 # Core Framework
-fastapi
-uvicorn[standard]
-gunicorn
+fastapi==0.110.0
+uvicorn[standard]==0.29.0
+gunicorn==21.2.0
 python-multipart
 
 # Database
-sqlmodel
+sqlmodel==0.0.16
 aiosqlite
 asyncpg
-psycopg2-binary
 
 # Authentication
 python-jose[cryptography]
@@ -22,17 +21,15 @@ pydantic-settings
 email-validator
 python-dotenv
 
-# AI/ML - Relaxed to avoid conflicts on Python 3.13
-tensorflow
-tensorflow-model-optimization
-scikit-learn
-joblib
-tf-keras
+# AI/ML (STABLE SETUP)
+tensorflow==2.15.0
+scikit-learn==1.4.2
+joblib==1.4.2
 
-# Data Processing
-pandas
-numpy
-Pillow
+# Data Processing (FORCE modern versions)
+numpy==1.26.4
+pandas==2.2.2
+Pillow>=10.0.0
 
 # AI Chatbot
 google-generativeai
@@ -44,6 +41,8 @@ httpx
 # Payments
 razorpay
 
-# Authentication (Firebase)
+# Firebase
 firebase-admin
+
+# Rate limiting
 slowapi

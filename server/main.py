@@ -1,5 +1,5 @@
 import os
-os.environ["TF_USE_LEGACY_KERAS"] = "0"
+import tf_compat
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -130,4 +130,4 @@ if __name__ == "__main__":
         host="0.0.0.0",
         port=port,
         proxy_headers=True
-    )
+    )

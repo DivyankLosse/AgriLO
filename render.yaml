@@ -19,4 +19,6 @@ services:
         sync: false
       - key: DEBUG
         value: "False"
+      - key: TF_USE_LEGACY_KERAS
+        value: "0"
     rootDir: server # Points Render to the server subdirectory

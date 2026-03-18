@@ -25,7 +25,7 @@ python-dotenv
 tensorflow==2.15.0
 keras==2.15.0
 scikit-learn==1.8.0
-joblib==1.4.2
+joblib
 tensorflow-model-optimization
 
 # Data Processing (FORCE modern versions)

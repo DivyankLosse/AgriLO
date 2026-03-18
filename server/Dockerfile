@@ -39,6 +39,8 @@ ENV PATH="/opt/venv/bin:$PATH"
 
 WORKDIR /app
 
+ENV TF_USE_LEGACY_KERAS=0
+
 # Runtime dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq5 \

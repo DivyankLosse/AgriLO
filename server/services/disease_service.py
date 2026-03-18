@@ -4,15 +4,13 @@ import json
 import numpy as np
 import asyncio
 from PIL import Image
+
+# Force modern Keras behavior
+os.environ["TF_USE_LEGACY_KERAS"] = "0"
+
 import tensorflow as tf
 from config import settings
 from services.treatment_service import treatment_service
-
-# Load Keras consistently from tf.keras or just keras (based on installed version)
-try:
-    import keras
-except ImportError:
-    from tensorflow import keras
 
 class DiseaseService:
     def __init__(self):
@@ -29,13 +27,13 @@ class DiseaseService:
             print("[INFO] Loading Leaf Disease Model (TensorFlow 2.15.0)...")
             
             if os.path.exists(settings.LEAF_MODEL_PATH):
-                # Using modern Keras loading
+                # Using tf.keras consistently to avoid import conflicts
                 try:
                     with tfmot.quantization.keras.quantize_scope():
-                        self.model = keras.models.load_model(settings.LEAF_MODEL_PATH)
+                        self.model = tf.keras.models.load_model(settings.LEAF_MODEL_PATH)
                 except Exception as scope_err:
                     print(f"[WARN] Quantize scope loading failed, trying standard: {scope_err}")
-                    self.model = keras.models.load_model(settings.LEAF_MODEL_PATH)
+                    self.model = tf.keras.models.load_model(settings.LEAF_MODEL_PATH)
                 
                 print("[INFO] Leaf Disease Model Loaded Successfully")
             else:

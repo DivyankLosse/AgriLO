@@ -10,8 +10,6 @@ python-multipart
 # Database
 sqlmodel==0.0.16
 aiosqlite
-asyncpg
-psycopg2-binary
 
 # Authentication
 python-jose[cryptography]

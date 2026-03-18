@@ -3,18 +3,9 @@ from sqlalchemy.orm import sessionmaker
 from sqlmodel import SQLModel
 from config import settings
 
-# Handle the DATABASE_URL carefully to support different drivers
+# SQLite with aiosqlite async driver
 db_url = settings.DATABASE_URL
-if db_url.startswith("sqlite") and "aiosqlite" not in db_url:
-    db_url = db_url.replace("sqlite://", "sqlite+aiosqlite://")
-elif db_url.startswith("postgres") and "asyncpg" not in db_url:
-    db_url = db_url.replace("postgresql://", "postgresql+asyncpg://").replace("postgres://", "postgresql+asyncpg://")
-
-# For production/cloud DBs (like Supabase), we might need to handle SSL
-connect_args = {}
-if "supabase.co" in db_url:
-    # Use SSL for Supabase connections
-    connect_args = {"ssl": True}
+connect_args = {"check_same_thread": False} if db_url.startswith("sqlite") else {}
 
 engine = create_async_engine(db_url, echo=settings.DEBUG, future=True, connect_args=connect_args)
 

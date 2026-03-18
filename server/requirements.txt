@@ -14,6 +14,7 @@ aiosqlite
 # Authentication
 python-jose[cryptography]
 passlib[argon2]
+firebase-admin
 
 # Configuration
 pydantic-settings

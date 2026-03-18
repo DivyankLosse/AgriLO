@@ -1,6 +1,7 @@
 import tensorflow as tf
-import keras
+from tensorflow import keras
 import numpy as np
+import asyncio
 from PIL import Image
 import io
 import json
@@ -19,10 +20,16 @@ class RootService:
              
         try:
             import tensorflow_model_optimization as tfmot
-            print("[INFO] Loading Root Disease Model (Lazy Load)...")
+            print("[INFO] Loading Root Disease Model (TensorFlow 2.15.0)...")
             if os.path.exists(settings.ROOT_MODEL_PATH):
-                with tfmot.quantization.keras.quantize_scope():
-                    self.model = keras.models.load_model(settings.ROOT_MODEL_PATH)
+                # Using tf.keras consistently
+                try:
+                    with tfmot.quantization.keras.quantize_scope():
+                        self.model = tf.keras.models.load_model(settings.ROOT_MODEL_PATH)
+                except Exception as scope_err:
+                    print(f"[WARN] Quantize scope loading failed, trying standard: {scope_err}")
+                    self.model = tf.keras.models.load_model(settings.ROOT_MODEL_PATH)
+                
                 print("[INFO] Root Disease Model Loaded")
             else:
                 print(f"[WARN] Root Model not found at {settings.ROOT_MODEL_PATH}")

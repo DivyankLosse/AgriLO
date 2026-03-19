@@ -19,16 +19,22 @@ class RootService:
              return
              
         try:
-            import tensorflow_model_optimization as tfmot
             print("[INFO] Loading Root Disease Model (TensorFlow 2.15.0)...")
             if os.path.exists(settings.ROOT_MODEL_PATH):
-                # Using tf.keras consistently
                 try:
+                    self.model = tf.keras.models.load_model(
+                        settings.ROOT_MODEL_PATH,
+                        compile=False,
+                    )
+                except Exception as load_err:
+                    print(f"[WARN] Standard model load failed, trying quantize scope: {load_err}")
+                    import tensorflow_model_optimization as tfmot
+
                     with tfmot.quantization.keras.quantize_scope():
-                        self.model = tf.keras.models.load_model(settings.ROOT_MODEL_PATH)
-                except Exception as scope_err:
-                    print(f"[WARN] Quantize scope loading failed, trying standard: {scope_err}")
-                    self.model = tf.keras.models.load_model(settings.ROOT_MODEL_PATH)
+                        self.model = tf.keras.models.load_model(
+                            settings.ROOT_MODEL_PATH,
+                            compile=False,
+                        )
                 
                 print("[INFO] Root Disease Model Loaded")
             else:

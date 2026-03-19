@@ -16,8 +16,15 @@ def _sanitize_keras_config(node: Any) -> None:
                 config["batch_input_shape"] = batch_shape
             config.pop("optional", None)
 
-        for value in node.values():
-            _sanitize_keras_config(value)
+        for key, value in list(node.items()):
+            if (
+                key == "dtype"
+                and isinstance(value, dict)
+                and value.get("class_name") == "DTypePolicy"
+            ):
+                node[key] = value.get("config", {}).get("name", "float32")
+            else:
+                _sanitize_keras_config(value)
     elif isinstance(node, list):
         for item in node:
             _sanitize_keras_config(item)

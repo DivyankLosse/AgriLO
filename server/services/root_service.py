@@ -7,6 +7,7 @@ import io
 import json
 import os
 from config import settings
+from utils.model_factory import build_root_model
 from utils.model_loader import load_model_with_compat
 
 class RootService:
@@ -21,26 +22,26 @@ class RootService:
              
         try:
             print("[INFO] Loading Root Disease Model (TensorFlow 2.15.0)...")
-            if os.path.exists(settings.ROOT_MODEL_PATH):
-                try:
-                    self.model = load_model_with_compat(settings.ROOT_MODEL_PATH)
-                except Exception as load_err:
-                    print(f"[WARN] Standard model load failed, trying quantize scope: {load_err}")
-                    import tensorflow_model_optimization as tfmot
-
-                    with tfmot.quantization.keras.quantize_scope():
-                        self.model = load_model_with_compat(settings.ROOT_MODEL_PATH)
-                
-                print("[INFO] Root Disease Model Loaded")
-            else:
-                print(f"[WARN] Root Model not found at {settings.ROOT_MODEL_PATH}")
-
             if os.path.exists(settings.ROOT_CLASS_INDICES_PATH):
                 with open(settings.ROOT_CLASS_INDICES_PATH, 'r') as f:
                     class_indices = json.load(f)
                 # Invert mapping: index -> label
                 self.class_labels = {v: k for k, v in class_indices.items()}
+
+            if os.path.exists(settings.ROOT_MODEL_PATH):
+                try:
+                    num_classes = len(self.class_labels) if self.class_labels else 2
+                    self.model = build_root_model(num_classes)
+                    self.model.load_weights(settings.ROOT_MODEL_PATH)
+                    print("[INFO] Root Disease Model weights loaded via rebuilt architecture")
+                except Exception as weights_err:
+                    print(f"[WARN] Weight-only root model load failed, trying compatibility loader: {weights_err}")
+                    self.model = load_model_with_compat(settings.ROOT_MODEL_PATH)
+                
+                print("[INFO] Root Disease Model Loaded")
             else:
+                print(f"[WARN] Root Model not found at {settings.ROOT_MODEL_PATH}")
+            if not self.class_labels:
                  print(f"[WARN] Root Class Indices not found at {settings.ROOT_CLASS_INDICES_PATH}")
 
         except Exception as e:

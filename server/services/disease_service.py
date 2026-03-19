@@ -9,6 +9,7 @@ import tensorflow as tf
 from config import settings
 from services.treatment_service import treatment_service
 from utils.model_loader import load_model_with_compat
+from utils.model_factory import build_leaf_model
 
 class DiseaseService:
     def __init__(self):
@@ -22,27 +23,26 @@ class DiseaseService:
 
         try:
             print("[INFO] Loading Leaf Disease Model (TensorFlow 2.15.0)...")
-            
-            if os.path.exists(settings.LEAF_MODEL_PATH):
-                try:
-                    self.model = load_model_with_compat(settings.LEAF_MODEL_PATH)
-                except Exception as load_err:
-                    print(f"[WARN] Standard model load failed, trying quantize scope: {load_err}")
-                    import tensorflow_model_optimization as tfmot
 
-                    with tfmot.quantization.keras.quantize_scope():
-                        self.model = load_model_with_compat(settings.LEAF_MODEL_PATH)
-                
-                print("[INFO] Leaf Disease Model Loaded Successfully")
-            else:
-                 print(f"[WARN] Leaf Model not found at {settings.LEAF_MODEL_PATH}")
-
-            # Load Class Indices
             if os.path.exists(settings.CLASS_INDICES_PATH):
                 with open(settings.CLASS_INDICES_PATH, 'r') as f:
                     data = json.load(f)
                     self.class_indices = {int(v): k for k, v in data.items()}
                 print("[INFO] Class indices loaded")
+            
+            if os.path.exists(settings.LEAF_MODEL_PATH):
+                try:
+                    num_classes = len(self.class_indices) if self.class_indices else 38
+                    self.model = build_leaf_model(num_classes)
+                    self.model.load_weights(settings.LEAF_MODEL_PATH)
+                    print("[INFO] Leaf Disease Model weights loaded via rebuilt architecture")
+                except Exception as weights_err:
+                    print(f"[WARN] Weight-only model load failed, trying compatibility loader: {weights_err}")
+                    self.model = load_model_with_compat(settings.LEAF_MODEL_PATH)
+                
+                print("[INFO] Leaf Disease Model Loaded Successfully")
+            else:
+                 print(f"[WARN] Leaf Model not found at {settings.LEAF_MODEL_PATH}")
 
         except Exception as e:
             print(f"[ERROR] Error loading leaf model: {e}")

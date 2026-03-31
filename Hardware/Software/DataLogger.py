@@ -3,6 +3,7 @@ import json
 import csv
 import os
 import logging
+import ssl
 from logging.handlers import RotatingFileHandler
 from datetime import datetime
 
@@ -24,6 +25,9 @@ with open(CONFIG_FILE, 'r') as f:
 BROKER = config.get("mqtt_broker", "localhost")
 PORT = config.get("mqtt_port", 1883)
 TOPIC = config.get("mqtt_topic", "farm/soil/data")
+USER = config.get("mqtt_user")
+PASS = config.get("mqtt_pass")
+USE_TLS = config.get("mqtt_use_tls", False)
 CSV_FILE = os.path.join(SCRIPT_DIR, config.get("csv_file", "soil_data.csv"))
 LOG_FILE = os.path.join(SCRIPT_DIR, config.get("log_file", "system.log"))
 
@@ -98,6 +102,12 @@ def on_message(client, userdata, msg):
 # ===========================
 # Use CallbackAPIVersion.VERSION2 for paho-mqtt v2 compatibility
 client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
+
+if USE_TLS:
+    client.tls_set(cert_reqs=ssl.CERT_REQUIRED)
+if USER and PASS:
+    client.username_pw_set(USER, PASS)
+
 client.on_connect = on_connect
 client.on_message = on_message
 

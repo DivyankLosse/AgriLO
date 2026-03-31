@@ -1,13 +1,16 @@
 #include <ArduinoOTA.h>
 #include <ESP8266WiFi.h>
+#include <WiFiClientSecure.h>
 #include <PubSubClient.h>
 #include <WiFiManager.h> // Install "WiFiManager" by tzapu
 
 // MQTT Configuration
-const char *mqtt_server = "10.78.51.224"; // PC/Server IP
-const int mqtt_port = 1883;
+const char *mqtt_server = "5c53b5296e584933bd06c1060b482f7d.s1.eu.hivemq.cloud"; 
+const int mqtt_port = 8883;
+const char *mqtt_user = "Admin";
+const char *mqtt_pass = "QJbkE4b!Pg9A!@n";
 
-WiFiClient espClient;
+WiFiClientSecure espClient;
 PubSubClient client(espClient);
 
 // Timers
@@ -16,6 +19,8 @@ const long telemetryInterval = 30000; // Send health status every 30s
 
 void setup() {
   Serial.begin(9600); // Must match Arduino Baud Rate
+
+  espClient.setInsecure(); // Ignore SSL certificate verification for ESP8266
 
   // 1. WiFiManager - Handles WiFi Connection
   WiFiManager wm;
@@ -84,7 +89,7 @@ void reconnectMQTT() {
   // Try to reconnect only if WiFi is present
   if (WiFi.status() == WL_CONNECTED) {
     if (!client.connected()) {
-      if (client.connect("ESP8266_Soil_Node01")) {
+      if (client.connect("ESP8266_Soil_Node01", mqtt_user, mqtt_pass)) {
         // Subscribe if needed
         // client.subscribe("farm/soil/node01/commands");
       } else {

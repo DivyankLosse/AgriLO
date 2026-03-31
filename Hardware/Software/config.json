@@ -1,6 +1,9 @@
 {
-    "mqtt_broker": "localhost",
-    "mqtt_port": 1883,
+    "mqtt_broker": "5c53b5296e584933bd06c1060b482f7d.s1.eu.hivemq.cloud",
+    "mqtt_port": 8883,
+    "mqtt_user": "Admin",
+    "mqtt_pass": "QJbkE4b!Pg9A!@n",
+    "mqtt_use_tls": true,
     "mqtt_topic": "farm/soil/node01/data",
     "csv_file": "soil_data.csv",
     "log_file": "system.log"

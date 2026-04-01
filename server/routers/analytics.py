@@ -43,7 +43,7 @@ async def get_analytics_summary(
         # Use hardware data for trends
         for record in reversed(hw_data):
             soil_trends.append({
-                "date": record.timestamp.isoformat(),
+                "date": record.timestamp.isoformat() + "Z",
                 "nitrogen": record.nitrogen,
                 "phosphorus": record.phosphorus,
                 "potassium": record.potassium,

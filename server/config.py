@@ -61,7 +61,7 @@ class Settings(BaseSettings):
     MQTT_TOPIC: str = "farm/soil/node01/data"
     SOIL_RAW_SCALE: float = 0.1 # Raw 800 -> 80 mg/kg
     
-    model_config = SettingsConfigDict(env_file=os.path.join(BASE_DIR, ".env"), env_file_encoding="utf-8")
+    model_config = SettingsConfigDict(env_file=os.path.join(BASE_DIR, ".env"), env_file_encoding="utf-8", extra="ignore")
 
 
 @lru_cache()
